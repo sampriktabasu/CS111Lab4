@@ -203,8 +203,6 @@ void write_superblock(int fd) {
 
 	struct ext2_superblock superblock = {0};
 
-	/* These are intentionally incorrectly set as 0, you should set them
-	   correctly and delete this comment */
 	superblock.s_inodes_count      = NUM_INODES;
 	superblock.s_blocks_count      = NUM_BLOCKS;
 	superblock.s_r_blocks_count    = 0;
@@ -278,7 +276,32 @@ void write_block_group_descriptor_table(int fd) {
 }
 
 void write_block_bitmap(int fd) {
-	/* This is all you */
+  // account for offset
+  off_t off = lseek(fd, BLOCK_OFFSET(BLOCK_BITMAP_BLOCKNO), SEEK_SET);
+  if(off == -1) {
+    errno_exit("lseek");
+  }
+
+  // initialize block bitmap
+  char block_bitmap[BLOCK_SIZE] = {0};
+
+  block_bitmap[0] = 0xFF;
+  block_bitmap[1] = 0xFF;
+  block_bitmap[2] = 0x7F;
+  // since num_blocks is 1024, should be 127
+  int end = (NUM_BLOCKS/8) - 1;
+  block_bitmap[end] = 0x80;
+
+  // more padding, fill the rest of the bits with 1
+  for(int i = end + 1; i < BLOCK_SIZE; i++) {
+    block_bitmap[i] = 0xFF;
+  }
+  
+  // write to bitmap, implement error checking, compare size
+  if(write(fd, &block_bitmap, BLOCK_SIZE) != BLOCK_SIZE) {
+    errno_exit("write");
+  }
+  
 }
 
 void write_inode_bitmap(int fd) {
