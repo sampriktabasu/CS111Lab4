@@ -46,7 +46,10 @@ typedef int32_t i32;
 #define ERROR_IGNORE 1
 #define MNT_COUNT_UNLIM -1
 #define USED_DIRS 2
-
+#define ROOT_USER 0
+#define REG_USER 1000
+#define HELLO_WORLD_SIZE 12
+#define HELLO_SIZE 11
 /* http://www.nongnu.org/ext2-doc/ext2.html */
 /* http://www.science.smith.edu/~nhowe/262/oldlabs/ext2.html */
 
@@ -367,11 +370,69 @@ void write_inode_table(int fd) {
 	lost_and_found_inode.i_blocks = 2; /* These are oddly 512 blocks */
 	lost_and_found_inode.i_block[0] = LOST_AND_FOUND_DIR_BLOCKNO;
 	write_inode(fd, LOST_AND_FOUND_INO, &lost_and_found_inode);
-
-	/* You should add your 3 other inodes in this function and delete this
-	   comment */
-    
-    
+	
+	// root inode
+	struct ext2_inode root_inode = {0};
+	root_inode.i_mode = EXT2_S_IFDIR
+	                              | EXT2_S_IRUSR
+	                              | EXT2_S_IWUSR
+	                              | EXT2_S_IXUSR
+	                              | EXT2_S_IRGRP
+	                              | EXT2_S_IXGRP
+	                              | EXT2_S_IROTH
+	                              | EXT2_S_IXOTH;
+	root_inode.i_uid = ROOT_USER;
+	root_inode.i_size = BLOCK_SIZE;
+	root_inode.i_atime = current_time;
+	root_inode.i_ctime = current_time;
+	root_inode.i_mtime = current_time;
+	root_inode.i_dtime = 0;
+	root_inode.i_gid = ROOT_USER;
+	root_inode.i_links_count = 3;
+	root_inode.i_blocks = 2; /* These are oddly 512 blocks */
+	root_inode.i_block[0] = ROOT_DIR_BLOCKNO;
+	write_inode(fd, EXT2_ROOT_INO, &root_inode);
+	
+	// hello world inode
+	struct ext2_inode hello_world_inode = {0};
+	hello_world_inode.i_mode = EXT2_S_IFREG
+	                              | EXT2_S_IRUSR
+	                              | EXT2_S_IWUSR
+	                              | EXT2_S_IRGRP
+	  | EXT2_S_IROTH;
+	hello_world_inode.i_uid = REG_USER;
+	hello_world_inode.i_size = HELLO_WORLD_SIZE;
+	hello_world_inode.i_atime = current_time;
+	hello_world_inode.i_ctime = current_time;
+	hello_world_inode.i_mtime = current_time;
+	hello_world_inode.i_dtime = 0;
+	hello_world_inode.i_gid = REG_USER;
+	hello_world_inode.i_links_count = 1;
+	hello_world_inode.i_blocks = 2; /* These are oddly 512 blocks */
+	hello_world_inode.i_block[0] = HELLO_WORLD_FILE_BLOCKNO;
+	write_inode(fd, HELLO_WORLD_INO, &hello_world_inode);
+	
+	// hello inode
+	struct ext2_inode hello_inode = {0};
+	hello_inode.i_mode = EXT2_S_IFLNK
+	                              | EXT2_S_IRUSR
+	                              | EXT2_S_IWUSR
+	                              | EXT2_S_IRGRP
+	                              | EXT2_S_IROTH;
+	hello_inode.i_uid = REG_USER;
+	hello_inode.i_size = HELLO_SIZE;
+	hello_inode.i_atime = current_time;
+	hello_inode.i_ctime = current_time;
+	hello_inode.i_mtime = current_time;
+	hello_inode.i_dtime = 0;
+	hello_inode.i_gid = REG_USER;
+	hello_inode.i_links_count = 1;
+	hello_inode.i_blocks = 0; /* These are oddly 512 blocks */
+	
+	char *output = "hello-world";
+	size_t len = strlen(output);
+	memcpy(&hello_inode.i_block, output, len);
+	write_inode(fd, HELLO_INO, &hello_inode);
 }
 
 void write_root_dir_block(int fd) {
