@@ -305,7 +305,29 @@ void write_block_bitmap(int fd) {
 }
 
 void write_inode_bitmap(int fd) {
-	/* This is all you */
+  // account for offset
+  off_t off = lseek(fd, BLOCK_OFFSET(INODE_BITMAP_BLOCKNO), SEEK_SET);
+  if(off == -1) {
+    errno_exit("lseek");
+  }
+
+  // initialize inode bitmap to have all 0s
+  char inode_bitmap[BLOCK_SIZE] = {0};
+
+  inode_bitmap[0] = 0xFF;
+  inode_bitmap[1] = 0x1F;
+  
+  // inodes start at 1 rather than 0
+  int end = NUM_INODES/8;
+  // fill the rest with 1
+  for(int i = end; i < BLOCK_SIZE; i++) {
+    inode_bitmap[i] = 0xFF;
+  }
+  
+  // write to bitmap, error checking, compare size
+  if(write(fd, &inode_bitmap, BLOCK_SIZE) != BLOCK_SIZE) {
+    errno_exit("write");
+  }
 }
 
 void write_inode(int fd, u32 index, struct ext2_inode *inode) {
